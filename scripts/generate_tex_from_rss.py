@@ -8,7 +8,7 @@ from datetime import datetime
 CSV_FILE = "rss_feeds.csv"
 OUTPUT_TEX = "press_review.tex"
 
-# LaTeX escaping
+# LaTeX escaping: handle backslash first to avoid double-escaping.
 LATEX_ESCAPE_ORDERED = [
     ("\\", r"\\textbackslash{}"),
     ("&", r"\&"),
@@ -22,21 +22,29 @@ LATEX_ESCAPE_ORDERED = [
     ("^", r"\textasciicircum{}"),
 ]
 
+# Filtre géographique strict appliqué post-traitement
 LOCATION_FILTER = ["Belgium", "Brussels", "Luxembourg", "Betzdorf"]
 
 def escape_latex(text: str) -> str:
+    """Escape special LaTeX characters in a string."""
     if not isinstance(text, str):
         text = str(text)
     for char, repl in LATEX_ESCAPE_ORDERED:
         text = text.replace(char, repl)
     return text
 
-def_for_latex(url: str) -> str:
+def escape_url_for_latex(url: str) -> str:
+    """
+    Minimal escaping for URLs inside \\href{...}{...}.
+    hyperref handles most characters, but % and # MUST be escaped.
+    Do NOT escape &, :, /.
+    """
     if not isinstance(url, str):
         url = str(url)
     return url.replace("%", r"\%").replace("#", r"\#")
 
 def read_rss_csv(file_path: str):
+    """Read CSV (Company, RSS Feed URL) and return a list of dicts."""
     feeds = []
     with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -45,12 +53,15 @@ def read_rss_csv(file_path: str):
     return feeds
 
 def fetch_articles(feed_url: str, limit: int = 5):
+    """
+    Fetch up to 'limit' articles from an RSS feed, filtering for BeLux keywords.
+    """
     feed = feedparser.parse(feed_url)
     articles = []
     for entry in getattr(feed, "entries", []):
         title = getattr(entry, "title", "")
         summary = getattr(entry, "summary", "")
-        # Filtrage par mots-clés géographiques
+        # Post-filter: keep only BeLux-related items
         if any(loc in (title + summary) for loc in LOCATION_FILTER):
             articles.append({"title": title, "link": getattr(entry, "link", "")})
         if len(articles) >= limit:
@@ -58,7 +69,9 @@ def fetch_articles(feed_url: str, limit: int = 5):
     return articles
 
 def generate_latex(feeds):
+    """Generate LaTeX content for the press review."""
     today = datetime.now().strftime("%d %B %Y")
+
     tex_lines = [
         r"\documentclass[11pt,a4paper]{article}",
         r"\usepackage[utf8]{inputenc}",
