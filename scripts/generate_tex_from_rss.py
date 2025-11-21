@@ -8,12 +8,44 @@ from datetime import datetime
 CSV_FILE = "rss_feeds.csv"
 OUTPUT_TEX = "press_review.tex"
 
-# Échappement LaTeX : traiter d'abord le backslash
+# LaTeX escaping: handle backslash first to avoid double-escaping issues.
 LATEX_ESCAPE_ORDERED = [
     ("\\", r"\\textbackslash{}"),
     ("&", r"\&"),
     ("%", r"\%"),
- dicts."""    ("$", r"\$"),
+    ("$", r"\$"),
+    ("#", r"\#"),
+    ("_", r"\_"),
+    ("{", r"\{"),
+    ("}", r"\}"),
+    ("~", r"\textasciitilde{}"),
+    ("^", r"\textasciicircum{}"),
+]
+
+def escape_latex(text: str) -> str:
+    """
+    Escape special LaTeX characters in a string.
+    """
+    if not isinstance(text, str):
+        text = str(text)
+    for char, repl in LATEX_ESCAPE_ORDERED:
+        text = text.replace(char, repl)
+    return text
+
+def escape_url_for_latex(url: str) -> str:
+    """
+    Minimal escaping for URLs inside \\href{...}{...}:
+    hyperref usually handles most characters, but % and # must be escaped.
+    Do NOT escape ampersand or colon/slash in URLs.
+    """
+    if not isinstance(url, str):
+        url = str(url)
+    return url.replace("%", r"\%").replace("#", r"\#")
+
+def read_rss_csv(file_path: str):
+    """
+    Read CSV (Company, RSS Feed URL) and return a list of dicts.
+    """
     feeds = []
     with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -22,21 +54,24 @@ LATEX_ESCAPE_ORDERED = [
     return feeds
 
 def fetch_articles(feed_url: str, limit: int = 5):
-    """Récupère jusqu'à 'limit' articles depuis un flux RSS."""
+    """
+    Fetch up to 'limit' articles from an RSS feed using feedparser.
+    """
     feed = feedparser.parse(feed_url)
     articles = []
-    for entry in feed.entries[:limit]:
+    # Guard for missing entries
+    for entry in getattr(feed, "entries", [])[:limit]:
         title = getattr(entry, "title", "")
         link = getattr(entry, "link", "")
         articles.append({"title": title, "link": link})
     return articles
 
 def generate_latex(feeds):
-    """Génère le contenu LaTeX pour la revue de presse."""
-    # Date en anglais pour cohérence avec LaTeX standard (ou adapte selon besoin)
+    """
+    Generate LaTeX content for the press review.
+    """
     today = datetime.now().strftime("%d %B %Y")
 
-    # Préambule LaTeX minimal compatible tectonic
     tex_lines = [
         r"\documentclass[11pt,a4paper]{article}",
         r"\usepackage[utf8]{inputenc}",
@@ -64,11 +99,9 @@ def generate_latex(feeds):
         else:
             for art in articles:
                 title = escape_latex(art["title"])
-                # Pour les URL, éviter d'échapper trop agressivement (hyperref gère souvent bien)
-                # On échappe quand même les caractères problématiques
-                link = escape_latex(art["link"])
+                link = escape_url_for_latex(art["link"])
                 tex_lines.append(rf"\textbf{{{title}}}\\")
-                tex_lines.append(rf"\href{{{link}}}{{Read more}}\\[0.5em]")
+                tex_lines.append(rf"\href{{{link}}}{{Read more}}\\[0.8em]")
 
     tex_lines.append(r"\end{document}")
     return "\n".join(tex_lines)
@@ -82,20 +115,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    ("#", r"\#"),
-    ("_", r"\_"),
-    ("{", r"\{"),
-    ("}", r"\}"),
-    ("~", r"\textasciitilde{}"),
-    ("^", r"\textasciicircum{}"),
-]
-
-def escape_latex(text: str) -> str:
-    """Échappe les caractères spéciaux LaTeX dans une chaîne."""
-    if not isinstance(text, str):
-        text = str(text)
-    for char, repl in LATEX_ESCAPE_ORDERED:
-        text = text.replace(char, repl)
-    return text
-
-def read_rss_csv(file_path: str):
