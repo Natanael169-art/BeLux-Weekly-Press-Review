@@ -5,9 +5,20 @@ import csv
 import feedparser
 from datetime import datetime
 
-# Fichier CSV généré par generate_rss.py
 CSV_FILE = "rss_feeds.csv"
 OUTPUT_TEX = "press_review.tex"
+
+# Liste des caractères spéciaux LaTeX à é_",# Liste des caractères spéciaux LaTeX à échapper
+    "{": "\\{",
+    "}": "\\}",
+    "~": "\\textasciitilde{}",
+    "^": "\\textasciicircum{}"
+}
+
+def escape_latex(text):
+    for char, replacement in LATEX_ESCAPE.items():
+        text = text.replace(char, replacement)
+    return text
 
 def read_rss_csv(file_path):
     feeds = []
@@ -42,14 +53,16 @@ def generate_latex(feeds):
     ]
 
     for feed in feeds:
-        tex_content.append(f"\\section*{{{feed['company']}}}")
+        tex_content.append(f"\\section*{{{escape_latex(feed['company'])}}}")
         articles = fetch_articles(feed["url"])
         if not articles:
             tex_content.append("\\textit{No recent articles found.}")
         else:
             for art in articles:
-                tex_content.append(f"\\textbf{{{art['title']}}}\\\\")
-                tex_content.append(f"\\href{{{art['link']}}}{{Read more}}\\\\[0.5em]")
+                title = escape_latex(art['title'])
+                link = escape_latex(art['link'])
+                tex_content.append(f"\\textbf{{{title}}}\\\\")
+                tex_content.append(f"\\href{{{link}}}{{Read more}}\\\\[0.5em]")
 
     tex_content.append("\\end{document}")
     return "\n".join(tex_content)
@@ -63,3 +76,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+LATEX_ESCAPE = {
+    "&": "\\&",
+    "%": "\\%",
+    "$": "\\$",
+    "#": "\\#",
