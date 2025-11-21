@@ -21,7 +21,6 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install feedparser jinja2 beautifulsoup4
           pip install feedparser jinja2 beautifulsoup4 requests
 
       - name: Install Snap and Tectonic
@@ -29,6 +28,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y snapd
           sudo snap install tectonic
+
+      # ✅ Nouvelle étape pour générer le CSV avec filtres Belgique/Luxembourg
+      - name: Generate RSS CSV (Belgium & Luxembourg)
+        run: |
+          python scripts/generate_rss.py
 
       - name: Generate LaTeX file from RSS feeds
         run: python scripts/generate_tex_from_rss.py
