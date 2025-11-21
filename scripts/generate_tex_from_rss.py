@@ -8,19 +8,12 @@ from datetime import datetime
 CSV_FILE = "rss_feeds.csv"
 OUTPUT_TEX = "press_review.tex"
 
-# Liste des caractères spéciaux LaTeX à é_",# Liste des caractères spéciaux LaTeX à échapper
-    "{": "\\{",
-    "}": "\\}",
-    "~": "\\textasciitilde{}",
-    "^": "\\textasciicircum{}"
-}
-
-def escape_latex(text):
-    for char, replacement in LATEX_ESCAPE.items():
-        text = text.replace(char, replacement)
-    return text
-
-def read_rss_csv(file_path):
+# Échappement LaTeX : traiter d'abord le backslash
+LATEX_ESCAPE_ORDERED = [
+    ("\\", r"\\textbackslash{}"),
+    ("&", r"\&"),
+    ("%", r"\%"),
+ dicts."""    ("$", r"\$"),
     feeds = []
     with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -28,44 +21,57 @@ def read_rss_csv(file_path):
             feeds.append({"company": row["Company"], "url": row["RSS Feed URL"]})
     return feeds
 
-def fetch_articles(feed_url, limit=5):
+def fetch_articles(feed_url: str, limit: int = 5):
+    """Récupère jusqu'à 'limit' articles depuis un flux RSS."""
     feed = feedparser.parse(feed_url)
     articles = []
     for entry in feed.entries[:limit]:
-        articles.append({"title": entry.title, "link": entry.link})
+        title = getattr(entry, "title", "")
+        link = getattr(entry, "link", "")
+        articles.append({"title": title, "link": link})
     return articles
 
 def generate_latex(feeds):
+    """Génère le contenu LaTeX pour la revue de presse."""
+    # Date en anglais pour cohérence avec LaTeX standard (ou adapte selon besoin)
     today = datetime.now().strftime("%d %B %Y")
-    tex_content = [
-        "\\documentclass[11pt,a4paper]{article}",
-        "\\usepackage[utf8]{inputenc}",
-        "\\usepackage{hyperref}",
-        "\\usepackage{geometry}",
-        "\\geometry{margin=1in}",
-        "\\title{BeLux Weekly Press Review}",
-        f"\\date{{{today}}}",
-        "\\begin{document}",
-        "\\maketitle",
-        "\\section*{Summary}",
-        "This weekly press review focuses on Belgium and Luxembourg companies.",
-        "\\vspace{1cm}"
+
+    # Préambule LaTeX minimal compatible tectonic
+    tex_lines = [
+        r"\documentclass[11pt,a4paper]{article}",
+        r"\usepackage[utf8]{inputenc}",
+        r"\usepackage[T1]{fontenc}",
+        r"\usepackage{lmodern}",
+        r"\usepackage{hyperref}",
+        r"\usepackage{geometry}",
+        r"\geometry{margin=1in}",
+        r"\title{BeLux Weekly Press Review}",
+        rf"\date{{{escape_latex(today)}}}",
+        r"\begin{document}",
+        r"\maketitle",
+        r"\section*{Summary}",
+        r"This weekly press review focuses on Belgium and Luxembourg companies.",
+        r"\vspace{1cm}",
     ]
 
     for feed in feeds:
-        tex_content.append(f"\\section*{{{escape_latex(feed['company'])}}}")
+        company_name = escape_latex(feed["company"])
+        tex_lines.append(rf"\section*{{{company_name}}}")
+
         articles = fetch_articles(feed["url"])
         if not articles:
-            tex_content.append("\\textit{No recent articles found.}")
+            tex_lines.append(r"\textit{No recent articles found.}")
         else:
             for art in articles:
-                title = escape_latex(art['title'])
-                link = escape_latex(art['link'])
-                tex_content.append(f"\\textbf{{{title}}}\\\\")
-                tex_content.append(f"\\href{{{link}}}{{Read more}}\\\\[0.5em]")
+                title = escape_latex(art["title"])
+                # Pour les URL, éviter d'échapper trop agressivement (hyperref gère souvent bien)
+                # On échappe quand même les caractères problématiques
+                link = escape_latex(art["link"])
+                tex_lines.append(rf"\textbf{{{title}}}\\")
+                tex_lines.append(rf"\href{{{link}}}{{Read more}}\\[0.5em]")
 
-    tex_content.append("\\end{document}")
-    return "\n".join(tex_content)
+    tex_lines.append(r"\end{document}")
+    return "\n".join(tex_lines)
 
 def main():
     feeds = read_rss_csv(CSV_FILE)
@@ -76,8 +82,20 @@ def main():
 
 if __name__ == "__main__":
     main()
-LATEX_ESCAPE = {
-    "&": "\\&",
-    "%": "\\%",
-    "$": "\\$",
-    "#": "\\#",
+    ("#", r"\#"),
+    ("_", r"\_"),
+    ("{", r"\{"),
+    ("}", r"\}"),
+    ("~", r"\textasciitilde{}"),
+    ("^", r"\textasciicircum{}"),
+]
+
+def escape_latex(text: str) -> str:
+    """Échappe les caractères spéciaux LaTeX dans une chaîne."""
+    if not isinstance(text, str):
+        text = str(text)
+    for char, repl in LATEX_ESCAPE_ORDERED:
+        text = text.replace(char, repl)
+    return text
+
+def read_rss_csv(file_path: str):
