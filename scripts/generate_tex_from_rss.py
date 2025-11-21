@@ -28,7 +28,20 @@ def escape_latex(text: str) -> str:
     if not isinstance(text, str):
         text = str(text)
     for char, repl in LATEX_ESCAPE_ORDERED:
-        row["Company"], "url": row["RSS Feed URL"]})        text = text.replace(char, repl)
+        repl)
+    return text
+
+def escape_url_for_latex(url: str) -> str:
+    if not isinstance(url, str):
+        url = str(url)
+    return url.replace("%", r"\%").replace("#", r"\#")
+
+def read_rss_csv(file_path: str):
+    feeds = []
+    with open(file_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            feeds.append({"company": row["Company"], "url": row["RSS Feed URL"]})
     return feeds
 
 def fetch_articles(feed_url: str, limit: int = 5):
@@ -69,16 +82,23 @@ def generate_latex(feeds):
 
         articles = fetch_articles(feed["url"])
         if not articles:
+            tex_lines.append(r"\textit{No relevant articles found for Belgium/Luxembourg.}")
+        else:
+            for art in articles:
+                title = escape_latex(art["title"])
+                link = escape_url_for_latex(art["link"])
+                tex_lines.append(rf"\textbf{{{title}}}\\")
+                tex_lines.append(rf"\href{{{link}}}{{Read more}}\\[0.8em]")
 
-    return text
+    tex_lines.append(r"\end{document}")
+    return "\n".join(tex_lines)
 
-def escape_url_for_latex(url: str) -> str:
-    if not isinstance(url, str):
-        url = str(url)
-    return url.replace("%", r"\%").replace("#", r"\#")
+def main():
+    feeds = read_rss_csv(CSV_FILE)
+    latex_code = generate_latex(feeds)
+    with open(OUTPUT_TEX, "w", encoding="utf-8") as f:
+        f.write(latex_code)
+    print(f"[OK] LaTeX file generated: {OUTPUT_TEX}")
 
-def read_rss_csv(file_path: str):
-    feeds = []
-    with open(file_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
+if __name__ == "__main__":
+    main()
