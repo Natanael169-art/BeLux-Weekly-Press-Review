@@ -28,10 +28,10 @@ def escape_latex(text: str) -> str:
     if not isinstance(text, str):
         text = str(text)
     for char, repl in LATEX_ESCAPE_ORDERED:
-        repl)
+        text = text.replace(char, repl)
     return text
 
-def escape_url_for_latex(url: str) -> str:
+def_for_latex(url: str) -> str:
     if not isinstance(url, str):
         url = str(url)
     return url.replace("%", r"\%").replace("#", r"\#")
