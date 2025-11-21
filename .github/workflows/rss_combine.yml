@@ -35,8 +35,8 @@ jobs:
           python scripts/generate_rss.py
 
       - name: Generate LaTeX file from RSS feeds
-        run: python scripts/generate_tex_from_rss.py
-
+        run: python scripts/generate_rss.py
+        
       - name: Compile LaTeX to PDF
         run: tectonic press_review.tex
 
