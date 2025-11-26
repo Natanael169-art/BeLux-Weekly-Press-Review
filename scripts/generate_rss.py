@@ -12,19 +12,11 @@ KEYWORDS = (
 
 COMPANIES = [
     {"name": "Barco", "location": "Belgium"},
-    {"name": "Husky", "location": "Belgium"},
     {"name": "SES", "location": "Luxembourg"},
-    {"name": "Agfa Gevaert", "location": "Belgium"},
     {"name": "Danone", "location": "Belgium"},
     {"name": "Total", "location": "Belgium"},
-    {"name": "IMEC", "location": "Belgium"},
     {"name": "Arval", "location": "Belgium"},
-    {"name": "Vinci", "location": "Belgium"},
     {"name": "Coca Cola", "location": "Belgium"},
-    {"name": "Unilin", "location": "Belgium"},
-    {"name": "Etex", "location": "Belgium"},
-    {"name": "Sodexo", "location": "Belgium"},
-    {"name": "Ontex", "location": "Belgium"},
     {"name": "Toyota", "location": "Belgium"},
 ]
 
